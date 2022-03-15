@@ -13,8 +13,6 @@ app.use(
 const port = process.env.PORT || 3001;
 // Configuration File for Snoowrap and Snoostorm
 
-const tifuSubbredditID = "2to41";
-
 // Requiring Snoowrap
 const Snoowrap = require('snoowrap');
 const auth = {
@@ -38,39 +36,24 @@ const r = new Snoowrap(auth);
 r.config(config)
 
 app.get("/top-posts", async (req, res) => {
-    let tifuPosts = await (await r.getSubreddit('tifu')).getHot();
-    let posts = [];
+    const tifuPosts = await (await r.getSubreddit('tifu')).getHot();
+    const posts = [];
+    //console.log(tifuPosts[4])
     tifuPosts.forEach(async (post) => {
-        let tempPost = {
+        const tempPost = {
             title: post.title,
             ups: post.ups,
-            selftext: post.selftext
+            selftext: post.selftext,
+            all_awardings: post.all_awardings,
+            num_comments: post.num_comments,
+            id: post.id,
+            authorName: post.author.name,
+            subreddit_name_prefixed: post.subreddit_name_prefixed,
         }
         posts.push(tempPost);
     });
     res.send(posts);
-    fs.writeFile("test.json", JSON.stringify(posts), 'utf8', function(err) {
-        if (err) {
-            return console.log(err);
-        }
-        console.log("file saved");
-    })
 })
-
-
-async function getPosts() {
-    let hotPosts = await r.getHot();
-    let tifuPosts = await (await r.getSubreddit('tifu')).getHot();
-    // console.dir(tifuPosts[6], {depth: 10});
-    tifuPosts.forEach(async (post) => {
-        console.log(post.title, " - ", post.ups);
-        // let replies = await r.getSubmission(post.id).comments[0];
-        // replies && console.log(replies.body);
-        // replies.forEach((reply) => console.log(reply));
-    });
-}
-
-getPosts();
 
 app.listen(port, () => {
     console.log("listening on port ", port);

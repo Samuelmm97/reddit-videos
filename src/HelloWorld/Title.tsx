@@ -1,5 +1,6 @@
 import {useRef} from 'react'
 import {useCallback, useEffect, useState} from 'react';
+import { getAudioData } from "@remotion/media-utils";
 import {
 	Audio,
 	continueRender,
@@ -9,6 +10,7 @@ import {
 	useVideoConfig,
 } from 'remotion';
 import {textToSpeech} from '../TextToSpeech';
+import { staticFile } from 'remotion';
 
 export const Title: React.FC<{
 	titleText: string;
@@ -17,7 +19,7 @@ export const Title: React.FC<{
     const audioRef = useRef({} as HTMLAudioElement);
 	const videoConfig = useVideoConfig();
 	const frame = useCurrentFrame();
-	const text = titleText.split(' ').map((t) => ` ${t} `);
+	const text = titleText?.split(' ').map((t) => ` ${t} `);
 
 	const [handle] = useState(() => delayRender());
 	const [audioUrl, setAudioUrl] = useState('');
@@ -29,10 +31,10 @@ export const Title: React.FC<{
     };
 
 	const fetchTts = useCallback(async () => {
-        console.log("The titleText is", titleText.length)
 		const fileName = await textToSpeech(titleText, 'enUSWoman1');
 
 		setAudioUrl(fileName);
+        // console.log(getAudioData(fileName));
 
 		continueRender(handle);
 	}, [handle, titleText]);
@@ -53,19 +55,19 @@ export const Title: React.FC<{
 					fontFamily: 'SF Pro Text, Helvetica, Arial',
 					fontWeight: 'bold',
 					fontSize: 30,
-					textAlign: 'center',
-					position: 'absolute',
-					height: '100%',
-					width: '100%',
+					textAlign: 'left',
+                    marginLeft: 200,
+                    marginRight: 200,
+                    marginTop: 250
 				}}
 			>
-				{text.map((t, i) => {
+				{text?.map((t, i) => {
 					return (
 						<span
 							style={{
 								color: titleColor,
-								marginLeft: 10,
-								marginRight: 10,
+								marginLeft: 5,
+								marginRight: 5,
 								display: 'inline-block',
 							}}
 						>

@@ -5,6 +5,7 @@ import {
 	SpeechSynthesisResult,
 	SpeechSynthesizer,
 } from 'microsoft-cognitiveservices-speech-sdk';
+import { staticFile } from 'remotion';
 
 const voices = {
 	ptBRWoman: 'pt-BR-FranciscaNeural',
@@ -26,7 +27,7 @@ export const textToSpeech = async (
 		throw new Error('Voice not found');
 	}
 
-	const fileName = `${md5(text)}.mp3`;
+	const fileName = `${md5(text || '')}.mp3`;
 
 	const fileExists = await checkIfAudioHasAlreadyBeenSynthesized(fileName);
 
@@ -57,14 +58,14 @@ export const textToSpeech = async (
 			);
 		}
 	);
-    
-    console.log("the result is", result);
 
 	const {audioData} = result;
 
 	synthesizer.close();
 
 	await uploadTtsToS3(audioData, fileName);
+
+    // console.log(getAudioData(staticFile(fileName)));
 
 	return createS3Url(fileName);
 };

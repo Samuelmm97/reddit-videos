@@ -5,16 +5,18 @@ import {delayRender} from 'remotion'
 import { useState } from 'react';
 import {Composition} from 'remotion';
 import {HelloWorld} from './HelloWorld';
+import { Post } from './post';
 
 export const RemotionVideo: React.FC = () => {
     const [title, setTitle] = useState('');
+    const [post, setPost] = useState({});
     const [handle] = useState(() => delayRender());
-    console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 
     const fetchData = useCallback(async () => {
         const response = await fetch('http://192.168.0.17:3100/top-posts');
         const json = await response.json();
         setTitle(json[3].selftext)
+        setPost(json[3]);
         console.log(json[6].selftext);
         continueRender(handle);
     }, [handle]);
@@ -57,14 +59,13 @@ export const RemotionVideo: React.FC = () => {
 		<>
 			<Composition
 				id="HelloWorld"
-				component={HelloWorld}
+				component={Post}
 				durationInFrames={5000}
 				fps={30}
 				width={1920}
 				height={1080}
 				defaultProps={{
-					titleText: title,
-					titleColor: 'black',
+					postData: post
 				}}
 			/>
 		</>
