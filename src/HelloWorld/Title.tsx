@@ -15,50 +15,25 @@ import { staticFile } from 'remotion';
 export const Title: React.FC<{
 	titleText: string;
 	titleColor: string;
-}> = ({titleText, titleColor}) => {
-    const audioRef = useRef({} as HTMLAudioElement);
+    audioUrl: string;
+}> = ({titleText, titleColor, audioUrl}) => {
 	const videoConfig = useVideoConfig();
 	const frame = useCurrentFrame();
 	const text = titleText?.split(' ').map((t) => ` ${t} `);
 
-	const [handle] = useState(() => delayRender());
-	const [audioUrl, setAudioUrl] = useState('');
-
-    const onLoadedMetadata = () => {
-        if (audioRef.current) {
-            console.log(audioRef.current.duration);
-        }
-    };
-
-	const fetchTts = useCallback(async () => {
-		const fileName = await textToSpeech(titleText, 'enUSWoman1');
-
-		setAudioUrl(fileName);
-        // console.log(getAudioData(fileName));
-
-		continueRender(handle);
-	}, [handle, titleText]);
-
-	useEffect(() => {
-		fetchTts();
-	}, [fetchTts]);
-
 	return (
 		<>
-			{audioUrl ? <Audio 
-				ref={audioRef}              
+			{audioUrl ? <Audio               
 				src={audioUrl}
-				onLoadedMetadata={onLoadedMetadata}  
                         /> : <></>}
 			<h1
 				style={{
 					fontFamily: 'SF Pro Text, Helvetica, Arial',
-					fontWeight: 'bold',
-					fontSize: 30,
+					fontSize: 25,
 					textAlign: 'left',
                     marginLeft: 200,
                     marginRight: 200,
-                    marginTop: 250
+                    marginTop: 200
 				}}
 			>
 				{text?.map((t, i) => {
