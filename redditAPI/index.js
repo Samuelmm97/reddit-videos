@@ -3,11 +3,15 @@ const express = require('express');
 const app = express();
 const fs = require('fs');
 const cors = require("cors");
+const bodyParser = require('body-parser')
 app.use(
   cors({
     origin: "*",
   })
 );
+
+// parse application/json
+app.use(bodyParser.json())
 
 
 const port = process.env.PORT || 3001;
@@ -53,6 +57,15 @@ app.get("/top-posts", async (req, res) => {
         posts.push(tempPost);
     });
     res.send(posts);
+})
+
+app.post("/create-audio", async (req, res) => {
+    const {body} = req;
+    console.log(body, req.body);
+    const {fileName, audioData} = body;
+    console.log(fileName);
+    fs.writeFile("../audio/" + fileName, Buffer.from(audioData));
+    res.send({success: true});
 })
 
 app.listen(port, () => {
