@@ -5,8 +5,7 @@ import {
 	SpeechSynthesisResult,
 	SpeechSynthesizer,
 } from 'microsoft-cognitiveservices-speech-sdk';
-import { staticFile } from 'remotion';
-
+import {staticFile} from 'remotion';
 
 const voices = {
 	ptBRWoman: 'pt-BR-FranciscaNeural',
@@ -63,12 +62,12 @@ export const textToSpeech = async (
 	const {audioData} = result;
 
 	synthesizer.close();
-    const body = {audioDatas: audioData, fileNames: fileName};
-    const response = await fetch("http://" + process.env.IP + ":3100/create-audio", {body: JSON.stringify(body), method: "POST"});
-    console.log("the response is", response);
+	// const body = {audioDatas: audioData, fileNames: fileName};
+	// const response = await fetch("http://" + process.env.IP + ":3100/create-audio", {body: JSON.stringify(body), method: "POST"});
+	// console.log("the response is", response);
 	await uploadTtsToS3(audioData, fileName);
 
-    // console.log(getAudioData(staticFile(fileName)));
+	// console.log(getAudioData(staticFile(fileName)));
 
 	return createS3Url(fileName);
 };
