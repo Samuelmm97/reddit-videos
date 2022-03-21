@@ -20,31 +20,21 @@ export const RemotionVideo: React.FC = () => {
 	const fetchData = useCallback(async () => {
 		const response = await fetch(`http://${process.env.IP}:3100/top-posts`);
 		const json = await response.json();
-		const index = 3;
-		const sentences = json[index].selftext.match(/[^\.!\?]+[\.!\?]+/g);
-		const sentencesPerParagraph = 5;
-		const paragraphs = [];
-		for (let i = 0; i < sentences.length; i += sentencesPerParagraph) {
-			let paragraph = '';
-			if (i + sentencesPerParagraph < sentences.length) {
-				paragraph = sentences
-					.slice(i, i + sentencesPerParagraph)
-					.join(' ');
-			} else {
-				paragraph = sentences.slice(i, sentences.length).join(' ');
-			}
-			paragraphs.push(paragraph);
-		}
-		json[index].sentences = paragraphs;
+		const index = 4;
+
+		const sentences = [json[index].selftext.replaceAll("&", "and")]
+		json[index].sentences = sentences;
 		json[index].durations = [];
 		json[index].audioUrls = [];
 		let tempDuration = 0;
 		for (const sentence of json[index]?.sentences || []) {
 			try {
-				const fileName = await textToSpeech(sentence, 'enUSWoman1');
+				const {fileName, wordBoundries} = await textToSpeech(sentence, 'enUSWoman1');
+                console.log(wordBoundries);
 				const durationInSeconds = await getAudioDuration(fileName);
 				json[index].durations.push(durationInSeconds);
 				json[index].audioUrls.push(fileName);
+                json[index].wordBoundries = wordBoundries;
 
 				tempDuration += durationInSeconds;
 			} catch (err) {

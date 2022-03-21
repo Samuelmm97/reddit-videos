@@ -11,6 +11,9 @@ import upvote from "../assets/upvoteReddit.png";
 import { textToSpeech } from './TextToSpeech';
 import { getAudioData } from "@remotion/media-utils";
 import { getCompositions } from '@remotion/renderer';
+import {
+    SpeechSynthesisWordBoundaryEventArgs
+} from 'microsoft-cognitiveservices-speech-sdk';
 interface PostData {
     title: string,
     ups: number,
@@ -23,6 +26,7 @@ interface PostData {
     sentences: string[],
     durations: number[],
     audioUrls: string[],
+    wordBoundries: SpeechSynthesisWordBoundaryEventArgs[]
 }
 
 interface Awarding {
@@ -87,7 +91,7 @@ export const Post: React.FC<{
                         // setTime(time + 100);
                         return (
                         <Series.Sequence durationInFrames={Number((postData.durations[i] * 30).toFixed(0)) || 5000}>
-                            <Title titleText={sentence} audioUrl={postData.audioUrls[i]} titleColor='white' />
+                            <Title titleText={sentence} audioUrl={postData.audioUrls[i]} titleColor='white' wordBoundries={postData.wordBoundries} />
                         </Series.Sequence>
                         )
                     })}

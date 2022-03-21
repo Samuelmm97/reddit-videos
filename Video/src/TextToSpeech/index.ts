@@ -4,8 +4,15 @@ import {
 	SpeechConfig,
 	SpeechSynthesisResult,
 	SpeechSynthesizer,
+    AudioConfig,
+    SpeechRecognizer,
+    SpeechRecognitionResult,
+    OutputFormat,
+    SpeechSynthesisOutputFormat,
+    SpeechSynthesisWordBoundaryEventArgs
 } from 'microsoft-cognitiveservices-speech-sdk';
 import {staticFile} from 'remotion';
+import { Buffer } from 'buffer';
 
 const voices = {
 	ptBRWoman: 'pt-BR-FranciscaNeural',
@@ -17,7 +24,7 @@ const voices = {
 export const textToSpeech = async (
 	text: string,
 	voice: keyof typeof voices
-): Promise<string> => {
+): Promise<any> => {
 	const speechConfig = SpeechConfig.fromSubscription(
 		process.env.AZURE_TTS_KEY || '',
 		process.env.AZURE_TTS_REGION || ''
@@ -27,22 +34,39 @@ export const textToSpeech = async (
 		throw new Error('Voice not found');
 	}
 
-	const fileName = `${md5(text || '')}.mp3`;
+    speechConfig.outputFormat = OutputFormat.Detailed;
+
+	const fileName = `${md5(text || '')}.wav`;
 
 	const fileExists = await checkIfAudioHasAlreadyBeenSynthesized(fileName);
 
 	if (fileExists) {
-		return createS3Url(fileName);
+        const url = createS3Url(fileName);
+        const response = await fetch(url);
+        console.log(url, response);
+        const audioData = await response.arrayBuffer();
+        console.log(audioData);
+        const audioConfig = AudioConfig.fromWavFileInput(Buffer.from(audioData));
+        const speechRecognizer = new SpeechRecognizer(speechConfig, audioConfig);
+        speechRecognizer.recognizeOnceAsync((result: SpeechRecognitionResult) => {
+            console.log(JSON.parse(result.json));
+        });
+		return url;
 	}
-
+    speechConfig.requestWordLevelTimestamps();
+    // let audio_config = 
+    speechConfig.speechSynthesisOutputFormat = SpeechSynthesisOutputFormat.Riff24Khz16BitMonoPcm;
 	const synthesizer = new SpeechSynthesizer(speechConfig);
-
+    
+    // synthesizer.
 	const ssml = `
                 <speak version="1.0" xml:lang="en-US">
                     <voice name="${voices[voice]}">
                         <break time="100ms" /> ${text}
                     </voice>
                 </speak>`;
+    
+    const wordBoundries: SpeechSynthesisWordBoundaryEventArgs[] = [];
 
 	const result = await new Promise<SpeechSynthesisResult>(
 		(resolve, reject) => {
@@ -56,20 +80,23 @@ export const textToSpeech = async (
 					synthesizer.close();
 				}
 			);
+            synthesizer.wordBoundary = function (s, e: SpeechSynthesisWordBoundaryEventArgs) {
+                // console.log("wordBoundary", e);
+                wordBoundries.push(e);
+            }
+            synthesizer.synthesisStarted = function(s, e) {
+                console.log("started", e);
+            }
 		}
 	);
-
+    
 	const {audioData} = result;
 
 	synthesizer.close();
-	// const body = {audioDatas: audioData, fileNames: fileName};
-	// const response = await fetch("http://" + process.env.IP + ":3100/create-audio", {body: JSON.stringify(body), method: "POST"});
-	// console.log("the response is", response);
+
 	await uploadTtsToS3(audioData, fileName);
 
-	// console.log(getAudioData(staticFile(fileName)));
-
-	return createS3Url(fileName);
+	return {fileName: createS3Url(fileName), wordBoundries};
 };
 
 const checkIfAudioHasAlreadyBeenSynthesized = async (fileName: string) => {

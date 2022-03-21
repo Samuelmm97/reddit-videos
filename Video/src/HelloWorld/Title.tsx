@@ -11,12 +11,16 @@ import {
 } from 'remotion';
 import {textToSpeech} from '../TextToSpeech';
 import { staticFile } from 'remotion';
+import {
+    SpeechSynthesisWordBoundaryEventArgs
+} from 'microsoft-cognitiveservices-speech-sdk';
 
 export const Title: React.FC<{
 	titleText: string;
 	titleColor: string;
     audioUrl: string;
-}> = ({titleText, titleColor, audioUrl}) => {
+    wordBoundries: SpeechSynthesisWordBoundaryEventArgs[]
+}> = ({titleText, titleColor, audioUrl, wordBoundries}) => {
 	const videoConfig = useVideoConfig();
 	const frame = useCurrentFrame();
 	const text = titleText?.split(' ').map((t) => ` ${t} `);
@@ -43,6 +47,15 @@ export const Title: React.FC<{
 								color: titleColor,
 								marginLeft: 5,
 								marginRight: 5,
+                                transform: `scale(${spring({
+									fps: videoConfig.fps,
+									frame: frame - ((wordBoundries[i].audioOffset / 330000) ),
+									config: {
+										damping: 100,
+										stiffness: 200,
+										mass: 0.5,
+									},
+								})})`,
 								display: 'inline-block',
 							}}
 						>
