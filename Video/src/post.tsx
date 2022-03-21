@@ -26,7 +26,7 @@ interface PostData {
     sentences: string[],
     durations: number[],
     audioUrls: string[],
-    wordBoundries: SpeechSynthesisWordBoundaryEventArgs[]
+    wordBoundries: number[]
 }
 
 interface Awarding {

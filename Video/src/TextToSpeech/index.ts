@@ -38,21 +38,6 @@ export const textToSpeech = async (
 
 	const fileName = `${md5(text || '')}.wav`;
 
-	// const fileExists = await checkIfAudioHasAlreadyBeenSynthesized(fileName);
-
-	// if (fileExists) {
-    //     const url = createS3Url(fileName);
-    //     const response = await fetch(url);
-    //     console.log(url, response);
-    //     const audioData = await response.arrayBuffer();
-    //     console.log(audioData);
-    //     const audioConfig = AudioConfig.fromWavFileInput(Buffer.from(audioData));
-    //     const speechRecognizer = new SpeechRecognizer(speechConfig, audioConfig);
-    //     speechRecognizer.recognizeOnceAsync((result: SpeechRecognitionResult) => {
-    //         console.log(JSON.parse(result.json));
-    //     });
-	// 	return url;
-	// }
     speechConfig.requestWordLevelTimestamps();
     // let audio_config = 
     speechConfig.speechSynthesisOutputFormat = SpeechSynthesisOutputFormat.Riff24Khz16BitMonoPcm;
@@ -66,7 +51,7 @@ export const textToSpeech = async (
                     </voice>
                 </speak>`;
     
-    const wordBoundries: SpeechSynthesisWordBoundaryEventArgs[] = [];
+    const wordBoundries: number[] = [];
 
 	const result = await new Promise<SpeechSynthesisResult>(
 		(resolve, reject) => {
@@ -82,7 +67,7 @@ export const textToSpeech = async (
 			);
             synthesizer.wordBoundary = function (s, e: SpeechSynthesisWordBoundaryEventArgs) {
                 // console.log("wordBoundary", e);
-                wordBoundries.push(e);
+                wordBoundries.push(Number((e.audioOffset / 330000).toFixed(0)));
             }
             synthesizer.synthesisStarted = function(s, e) {
                 console.log("started", e);

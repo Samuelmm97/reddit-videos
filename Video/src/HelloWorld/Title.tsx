@@ -19,7 +19,7 @@ export const Title: React.FC<{
 	titleText: string;
 	titleColor: string;
     audioUrl: string;
-    wordBoundries: SpeechSynthesisWordBoundaryEventArgs[]
+    wordBoundries: number[]
 }> = ({titleText, titleColor, audioUrl, wordBoundries}) => {
 	const videoConfig = useVideoConfig();
 	const frame = useCurrentFrame();
@@ -50,7 +50,7 @@ export const Title: React.FC<{
 								marginRight: 5,
                                 transform: `scale(${spring({
 									fps: videoConfig.fps,
-									frame: frame - ((wordBoundries[i]?.audioOffset / 330000) ),
+									frame: frame - wordBoundries[i],
 									config: {
 										damping: 100,
 										stiffness: 200,
