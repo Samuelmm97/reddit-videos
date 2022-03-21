@@ -77,7 +77,7 @@ export const Post: React.FC<{
                     <p style={{fontSize: 30, marginRight: 20}}>{postData.subreddit_name_prefixed} <span>Posted by u/{postData.authorName}</span></p>
                     {postData?.all_awardings?.map((award: Awarding) => {
                         return (
-                            <div style={{display: 'flex', marginRight: 10, justifyContent: "center"}}>
+                            <div key={award.icon_url} style={{display: 'flex', marginRight: 10, justifyContent: "center"}}>
                                 <Img style={{height: 40, width: 40, marginRight: 2, marginTop: 30}} src={award.icon_url}/>
                                 <p style={{fontSize:30}}>{award.count}</p>
                             </div>
@@ -86,17 +86,11 @@ export const Post: React.FC<{
                 </div>
             </div>
             
-                <Series>
-                    {postData?.sentences?.map((sentence: string, i: number) => {
-                        // setTime(time + 100);
-                        return (
-                        <Series.Sequence durationInFrames={Number((postData.durations[i] * 30).toFixed(0)) || 5000}>
-                            <Title titleText={sentence} audioUrl={postData.audioUrls[i]} titleColor='white' wordBoundries={postData.wordBoundries} />
-                        </Series.Sequence>
-                        )
-                    })}
-                    
-			    </Series>
+
+            <Sequence from={0}>
+                <Title titleText={postData?.sentences && postData.sentences[0]} audioUrl={postData?.audioUrls && postData.audioUrls[0]} titleColor='white' wordBoundries={postData.wordBoundries} />
+            </Sequence>
+    
             
 		</div>
 	);

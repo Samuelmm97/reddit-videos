@@ -20,7 +20,7 @@ export const RemotionVideo: React.FC = () => {
 	const fetchData = useCallback(async () => {
 		const response = await fetch(`http://${process.env.IP}:3100/top-posts`);
 		const json = await response.json();
-		const index = 4;
+		const index = 2;
 
 		const sentences = [json[index].selftext.replaceAll("&", "and")]
 		json[index].sentences = sentences;

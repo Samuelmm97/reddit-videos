@@ -40,16 +40,17 @@ export const Title: React.FC<{
                     marginTop: 200
 				}}
 			>
-				{text?.map((t, i) => {
+				{wordBoundries && text?.map((t, i) => {
 					return (
 						<span
+							key={i}
 							style={{
 								color: titleColor,
 								marginLeft: 5,
 								marginRight: 5,
                                 transform: `scale(${spring({
 									fps: videoConfig.fps,
-									frame: frame - ((wordBoundries[i].audioOffset / 330000) ),
+									frame: frame - ((wordBoundries[i]?.audioOffset / 330000) ),
 									config: {
 										damping: 100,
 										stiffness: 200,
