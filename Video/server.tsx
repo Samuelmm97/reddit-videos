@@ -36,7 +36,10 @@ app.get('/', async (req, res) => {
 			return;
 		}
 		const bundled = await bundle(path.join(__dirname, './src/index.tsx'));
-		const comps = await getCompositions(bundled, {inputProps: req.query});
+		const comps = await getCompositions(bundled, {
+			inputProps: req.query,
+			envVariables: process.env as Record<string, string>,
+		});
 		const video = comps.find((c) => c.id === compositionId);
 		if (!video) {
 			throw new Error(`No video called ${compositionId}`);
@@ -51,15 +54,18 @@ app.get('/', async (req, res) => {
 			webpackBundle: bundled,
 			onStart: () => console.log('Rendering frames...'),
 			onFrameUpdate: (f) => {
-				if (f % 10 === 0) {
-					console.log(`Rendered frame ${f}`);
-				}
+				console.log(`Rendered frame ${f}`);
 			},
+			onError: (e) => {
+				console.log(e);
+			},
+			envVariables: process.env as Record<string, string>,
 			parallelism: null,
 			outputDir: tmpDir,
 			inputProps: req.query,
 			compositionId,
 			imageFormat: 'jpeg',
+			timeoutInMilliseconds: 3000000,
 		});
 
 		const finalOutput = path.join(tmpDir, 'out.mp4');

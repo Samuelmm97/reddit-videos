@@ -7,10 +7,15 @@ services:
       - ./redditAPI:/app
     ports:
       - 3100:3100
+    env_file:
+      - ./redditAPI/.env
   video:
     build:
       context: ./Video
       dockerfile: Dockerfile
     ports:
-      - "3000:3000"
+      - "8000:8000"
     container_name: video
+    env_file:
+      - ./Video/.env
+    privileged: true
