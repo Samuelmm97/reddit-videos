@@ -45,19 +45,33 @@ app.get('/', async (req, res) => {
 		const json: any = await response.json();
 		const index = 2;
 
-		const sentences = [json[index].selftext.replaceAll('&', 'and')];
-		json[index].sentences = sentences;
+		const sentences = json[index].selftext.replaceAll('&', 'and').match(/[^\.!\?]+[\.!\?]+/g);
+		const sentencesPerParagraph = 6;
+		const paragraphs = [];
+		for (let i = 0; i < sentences.length; i += sentencesPerParagraph) {
+			let paragraph = '';
+			if (i + sentencesPerParagraph < sentences.length) {
+				paragraph = sentences
+					.slice(i, i + sentencesPerParagraph)
+					.join(' ');
+			} else {
+				paragraph = sentences.slice(i, sentences.length).join(' ');
+			}
+			paragraphs.push(paragraph);
+		}
+		json[index].paragraphs = paragraphs;
 		json[index].durations = [];
 		json[index].audioUrls = [];
 		let tempDuration = 0;
-		for (const sentence of json[index]?.sentences || []) {
+		json[index].wordBoundries = [];
+		for (const paragraph of json[index]?.paragraphs || []) {
 			try {
 				const {audioData, wordBoundries} = await textToSpeech(
-					sentence,
+					paragraph,
 					'enUSWoman1'
 				);
 				console.log(wordBoundries);
-				const fileName = md5(sentence) + '.wav';
+				const fileName = md5(paragraph) + '.wav';
 				// await fs.promises.open(fileName, 'w');
 				await fs.promises.writeFile(
 					'./public/' + fileName,
@@ -67,19 +81,19 @@ app.get('/', async (req, res) => {
 					wordBoundries[wordBoundries.length - 1];
 				json[index].durations.push(durationInSeconds / 30);
 				json[index].audioUrls.push(fileName);
-				json[index].wordBoundries = wordBoundries;
+				json[index].wordBoundries.push(wordBoundries);
 
 				tempDuration += durationInSeconds;
 			} catch (err) {
-				console.log(sentence, err);
+				console.log(paragraph, err);
 			}
 		}
 
 		json[index].totalDuration = tempDuration;
 
-		console.log(json[index].sentences, json[index].durations);
+		console.log(json[index].paragraphs, json[index].durations);
 
-		if (json[index].sentences.length != json[index].durations.length) {
+		if (json[index].paragraphs.length != json[index].durations.length) {
 			console.log('DURATIONS NOT MATCHING!!!!!');
 			return;
 		}
@@ -98,12 +112,16 @@ app.get('/', async (req, res) => {
 		const tmpDir = await fs.promises.mkdtemp(
 			path.join(os.tmpdir(), 'remotion-')
 		);
+		const startDate = Math.round(new Date().getTime() / 1000);
+
 		const {assetsInfo} = await renderFrames({
 			config: video,
 			webpackBundle: bundled,
 			onStart: () => console.log('Rendering frames...'),
 			onFrameUpdate: (f) => {
-				console.log(`Rendered frame ${f}`);
+				const endDate = Math.round(new Date().getTime() / 1000);
+				const elapsed = endDate - startDate;
+				console.log(`Rendered frame ${f}`, 'Elapsed seconds:' , elapsed);
 			},
 			onError: (e) => {
 				console.log(e);

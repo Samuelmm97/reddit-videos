@@ -16,6 +16,7 @@ import {
 } from 'remotion';
 import {Title} from './HelloWorld/Title';
 import upvote from './assets/upvoteReddit.png';
+import downvote from './assets/RedditDownvote.png'
 import {textToSpeech} from './TextToSpeech';
 import {getAudioData} from '@remotion/media-utils';
 import {getCompositions} from '@remotion/renderer';
@@ -29,10 +30,10 @@ interface PostData {
 	id: string;
 	authorName: string;
 	subreddit_name_prefixed: string;
-	sentences: string[];
+	paragraphs: string[];
 	durations: number[];
 	audioUrls: string[];
-	wordBoundries: number[];
+	wordBoundries: any;
 }
 
 interface Awarding {
@@ -94,6 +95,10 @@ export const Post: React.FC<{
 					<p style={{fontSize: 30, color: '#FF4500', lineHeight: 0}}>
 						{postData.ups}
 					</p>
+					<Img
+						style={{height: 40, width: 41, marginRight: 2}}
+						src={downvote}
+					/>
 				</div>
 
 				<div style={{display: 'flex'}}>
@@ -126,15 +131,17 @@ export const Post: React.FC<{
 					})}
 				</div>
 			</div>
-
-			<Sequence from={0}>
-				<Title
-					titleText={postData?.sentences && postData.sentences[0]}
-					audioUrl={postData?.audioUrls && postData.audioUrls[0]}
-					titleColor="white"
-					wordBoundries={postData.wordBoundries}
-				/>
-			</Sequence>
+			<Series>
+                    {postData?.paragraphs?.map((paragraph: string, i: number) => {
+                       
+                        return (
+                        <Series.Sequence durationInFrames={Number((postData.durations[i] * 30).toFixed(0)) || 5000}>
+                            <Title titleText={paragraph} audioUrl={postData.audioUrls[i]} titleColor='white' wordBoundries={postData.wordBoundries[i]} />
+                        </Series.Sequence>
+                        )
+                    })}
+                    
+			    </Series>
 		</div>
 	);
 };
