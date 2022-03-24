@@ -28,7 +28,7 @@ RUN addgroup -S pptruser && adduser -S -g pptruser pptruser \
   && chown -R pptruser:pptruser /home/pptruser \
   && chown -R pptruser:pptruser /app
 # Run everything after as non-privileged user.
-USER pptruser
+# USER pptruser
 
 EXPOSE 8000
 

@@ -15,6 +15,11 @@ import express from 'express';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import {getAudioDuration} from '@remotion/media-utils';
+import {textToSpeech} from './src/TextToSpeech';
+import fetch from 'cross-fetch';
+import md5 from 'md5';
+globalThis.fetch = fetch;
 
 const app = express();
 const port = process.env.PORT || 8000;
@@ -35,9 +40,53 @@ app.get('/', async (req, res) => {
 			sendFile(cache.get(JSON.stringify(req.query)) as string);
 			return;
 		}
+
+		const response = await fetch(`http://${process.env.IP}:3100/top-posts`);
+		const json: any = await response.json();
+		const index = 2;
+
+		const sentences = [json[index].selftext.replaceAll('&', 'and')];
+		json[index].sentences = sentences;
+		json[index].durations = [];
+		json[index].audioUrls = [];
+		let tempDuration = 0;
+		for (const sentence of json[index]?.sentences || []) {
+			try {
+				const {audioData, wordBoundries} = await textToSpeech(
+					sentence,
+					'enUSWoman1'
+				);
+				console.log(wordBoundries);
+				const fileName = md5(sentence) + '.wav';
+				// await fs.promises.open(fileName, 'w');
+				await fs.promises.writeFile(
+					'./public/' + fileName,
+					new Uint8Array(audioData)
+				);
+				const durationInSeconds =
+					wordBoundries[wordBoundries.length - 1];
+				json[index].durations.push(durationInSeconds / 30);
+				json[index].audioUrls.push(fileName);
+				json[index].wordBoundries = wordBoundries;
+
+				tempDuration += durationInSeconds;
+			} catch (err) {
+				console.log(sentence, err);
+			}
+		}
+
+		json[index].totalDuration = tempDuration;
+
+		console.log(json[index].sentences, json[index].durations);
+
+		if (json[index].sentences.length != json[index].durations.length) {
+			console.log('DURATIONS NOT MATCHING!!!!!');
+			return;
+		}
+
 		const bundled = await bundle(path.join(__dirname, './src/index.tsx'));
 		const comps = await getCompositions(bundled, {
-			inputProps: req.query,
+			inputProps: json[index],
 			envVariables: process.env as Record<string, string>,
 		});
 		const video = comps.find((c) => c.id === compositionId);
@@ -62,7 +111,7 @@ app.get('/', async (req, res) => {
 			envVariables: process.env as Record<string, string>,
 			parallelism: null,
 			outputDir: tmpDir,
-			inputProps: req.query,
+			inputProps: json[index],
 			compositionId,
 			imageFormat: 'jpeg',
 			timeoutInMilliseconds: 3000000,
@@ -94,7 +143,7 @@ app.listen(port);
 
 console.log(
 	[
-		`The server has started on http://localhost:${port}!`,
+		`The server has started on http://localhost:${port}`,
 		'You can render a video by passing props as URL parameters.',
 		'',
 		'If you are running Hello World, try this:',

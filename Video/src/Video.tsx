@@ -13,50 +13,6 @@ import {getAudioData, getAudioDuration} from '@remotion/media-utils';
 const inputProps = getInputProps();
 
 export const RemotionVideo: React.FC = () => {
-	const [post, setPost] = useState({});
-	const [handle] = useState(() => delayRender());
-	const [totalDuration, setTotalDuration] = useState(5000);
-
-	const fetchData = useCallback(async () => {
-		const response = await fetch(`http://${process.env.IP}:3100/top-posts`);
-		const json = await response.json();
-		const index = 2;
-
-		const sentences = [json[index].selftext.replaceAll("&", "and")]
-		json[index].sentences = sentences;
-		json[index].durations = [];
-		json[index].audioUrls = [];
-		let tempDuration = 0;
-		for (const sentence of json[index]?.sentences || []) {
-			try {
-				const {fileName, wordBoundries} = await textToSpeech(sentence, 'enUSWoman1');
-                console.log(wordBoundries);
-				const durationInSeconds = await getAudioDuration(fileName);
-				json[index].durations.push(durationInSeconds);
-				json[index].audioUrls.push(fileName);
-                json[index].wordBoundries = wordBoundries;
-
-				tempDuration += durationInSeconds;
-			} catch (err) {
-				console.log(sentence, err);
-			}
-		}
-
-		console.log(json[index].sentences, json[index].durations);
-
-		setTotalDuration(Number((tempDuration * 30).toFixed(0)));
-		setPost(json[index]);
-		if (json[index].sentences.length != json[index].durations.length) {
-			console.log('DURATIONS NOT MATCHING!!!!!');
-			return;
-		}
-
-		continueRender(handle);
-	}, [handle]);
-
-	useEffect(() => {
-		fetchData();
-	}, [fetchData]);
 	if (!process.env.AZURE_TTS_KEY) {
 		throw new Error(
 			'AZURE_TTS_KEY environment variable is missing. Read the docs first and complete the setup.'
@@ -93,12 +49,12 @@ export const RemotionVideo: React.FC = () => {
 			<Composition
 				id="HelloWorld"
 				component={Post}
-				durationInFrames={totalDuration ?? 30}
+				durationInFrames={inputProps.totalDuration ?? 30}
 				fps={30}
 				width={1920}
 				height={1080}
 				defaultProps={{
-					postData: post,
+					postData: inputProps,
 				}}
 			/>
 		</>

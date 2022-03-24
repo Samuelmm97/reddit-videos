@@ -4,15 +4,15 @@ import {
 	SpeechConfig,
 	SpeechSynthesisResult,
 	SpeechSynthesizer,
-    AudioConfig,
-    SpeechRecognizer,
-    SpeechRecognitionResult,
-    OutputFormat,
-    SpeechSynthesisOutputFormat,
-    SpeechSynthesisWordBoundaryEventArgs
+	AudioConfig,
+	SpeechRecognizer,
+	SpeechRecognitionResult,
+	OutputFormat,
+	SpeechSynthesisOutputFormat,
+	SpeechSynthesisWordBoundaryEventArgs,
 } from 'microsoft-cognitiveservices-speech-sdk';
 import {staticFile} from 'remotion';
-import { Buffer } from 'buffer';
+import {Buffer} from 'buffer';
 
 const voices = {
 	ptBRWoman: 'pt-BR-FranciscaNeural',
@@ -34,24 +34,25 @@ export const textToSpeech = async (
 		throw new Error('Voice not found');
 	}
 
-    speechConfig.outputFormat = OutputFormat.Detailed;
+	speechConfig.outputFormat = OutputFormat.Detailed;
 
 	const fileName = `${md5(text || '')}.wav`;
 
-    speechConfig.requestWordLevelTimestamps();
-    // let audio_config = 
-    speechConfig.speechSynthesisOutputFormat = SpeechSynthesisOutputFormat.Riff24Khz16BitMonoPcm;
+	speechConfig.requestWordLevelTimestamps();
+	// let audio_config =
+	speechConfig.speechSynthesisOutputFormat =
+		SpeechSynthesisOutputFormat.Riff24Khz16BitMonoPcm;
 	const synthesizer = new SpeechSynthesizer(speechConfig);
-    
-    // synthesizer.
+
+	// synthesizer.
 	const ssml = `
                 <speak version="1.0" xml:lang="en-US">
                     <voice name="${voices[voice]}">
                         <break time="100ms" /> ${text}
                     </voice>
                 </speak>`;
-    
-    const wordBoundries: number[] = [];
+
+	const wordBoundries: number[] = [];
 
 	const result = await new Promise<SpeechSynthesisResult>(
 		(resolve, reject) => {
@@ -65,23 +66,32 @@ export const textToSpeech = async (
 					synthesizer.close();
 				}
 			);
-            synthesizer.wordBoundary = function (s, e: SpeechSynthesisWordBoundaryEventArgs) {
-                // console.log("wordBoundary", e);
-                wordBoundries.push(Number((e.audioOffset / 330000).toFixed(0)));
-            }
-            synthesizer.synthesisStarted = function(s, e) {
-                console.log("started", e);
-            }
+			synthesizer.wordBoundary = function (
+				s,
+				e: SpeechSynthesisWordBoundaryEventArgs
+			) {
+				console.log(
+					'wordBoundary',
+					Number((e.audioOffset / 330000).toFixed(0))
+				);
+				wordBoundries.push(Number((e.audioOffset / 330000).toFixed(0)));
+			};
+			synthesizer.synthesisStarted = function (s, e) {
+				console.log('started', e);
+			};
+			synthesizer.synthesisCompleted = function (s, e) {
+				console.log('COMPLETED', e);
+			};
 		}
 	);
-    
+
 	const {audioData} = result;
 
 	synthesizer.close();
 
-	await uploadTtsToS3(audioData, fileName);
+	// await uploadTtsToS3(audioData, fileName);
 
-	return {fileName: createS3Url(fileName), wordBoundries};
+	return {audioData, wordBoundries};
 };
 
 const checkIfAudioHasAlreadyBeenSynthesized = async (fileName: string) => {
@@ -99,7 +109,8 @@ const checkIfAudioHasAlreadyBeenSynthesized = async (fileName: string) => {
 		return await s3.send(
 			new GetObjectCommand({Bucket: bucketName, Key: fileName})
 		);
-	} catch {
+	} catch (e) {
+		console.log('s3 error', e);
 		return false;
 	}
 };
@@ -107,21 +118,25 @@ const checkIfAudioHasAlreadyBeenSynthesized = async (fileName: string) => {
 const uploadTtsToS3 = async (audioData: ArrayBuffer, fileName: string) => {
 	const bucketName = process.env.AWS_S3_BUCKET_NAME;
 	const awsRegion = process.env.AWS_S3_REGION;
-	const s3 = new S3Client({
-		region: awsRegion,
-		credentials: {
-			accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
-			secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
-		},
-	});
+	try {
+		const s3 = new S3Client({
+			region: awsRegion,
+			credentials: {
+				accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
+				secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
+			},
+		});
 
-	return s3.send(
-		new PutObjectCommand({
-			Bucket: bucketName,
-			Key: fileName,
-			Body: new Uint8Array(audioData),
-		})
-	);
+		return s3.send(
+			new PutObjectCommand({
+				Bucket: bucketName,
+				Key: fileName,
+				Body: new Uint8Array(audioData),
+			})
+		);
+	} catch (e) {
+		console.log(e);
+	}
 };
 
 const createS3Url = (filename: string) => {
