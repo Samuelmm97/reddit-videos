@@ -16,7 +16,7 @@ import {
 } from 'remotion';
 import {Title} from './HelloWorld/Title';
 import upvote from './assets/upvoteReddit.png';
-import downvote from './assets/RedditDownvote.png'
+import downvote from './assets/RedditDownvote.png';
 import {textToSpeech} from './TextToSpeech';
 import {getAudioData} from '@remotion/media-utils';
 import {getCompositions} from '@remotion/renderer';
@@ -132,16 +132,27 @@ export const Post: React.FC<{
 				</div>
 			</div>
 			<Series>
-                    {postData?.paragraphs?.map((paragraph: string, i: number) => {
-                       
-                        return (
-                        <Series.Sequence durationInFrames={Number((postData.durations[i] * 30).toFixed(0)) || 5000}>
-                            <Title titleText={paragraph} audioUrl={postData.audioUrls[i]} titleColor='white' wordBoundries={postData.wordBoundries[i]} />
-                        </Series.Sequence>
-                        )
-                    })}
-                    
-			    </Series>
+				{postData?.paragraphs?.map((paragraph: string, i: number) => {
+					return (
+						<Series.Sequence
+							durationInFrames={
+								Number(
+									(
+										postData.durations[i] * videoConfig.fps
+									).toFixed(0)
+								) || 5000
+							}
+						>
+							<Title
+								titleText={paragraph}
+								audioUrl={postData.audioUrls[i]}
+								titleColor="white"
+								wordBoundries={postData.wordBoundries[i]}
+							/>
+						</Series.Sequence>
+					);
+				})}
+			</Series>
 		</div>
 	);
 };

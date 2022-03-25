@@ -45,8 +45,10 @@ app.get('/', async (req, res) => {
 		const json: any = await response.json();
 		const index = 2;
 
-		const sentences = json[index].selftext.replaceAll('&', 'and').match(/[^\.!\?]+[\.!\?]+/g);
-		const sentencesPerParagraph = 6;
+		const sentences = json[index].selftext
+			.replaceAll('&', 'and')
+			.match(/[^\.!\?]+[\.!\?]+/g);
+		const sentencesPerParagraph = 20;
 		const paragraphs = [];
 		for (let i = 0; i < sentences.length; i += sentencesPerParagraph) {
 			let paragraph = '';
@@ -77,8 +79,13 @@ app.get('/', async (req, res) => {
 					'./public/' + fileName,
 					new Uint8Array(audioData)
 				);
-				const durationInSeconds =
-					wordBoundries[wordBoundries.length - 1];
+				const durationInSeconds = Number(
+					Number(
+						(
+							wordBoundries[wordBoundries.length - 1] * 1.025
+						).toFixed(0)
+					)
+				);
 				json[index].durations.push(durationInSeconds / 30);
 				json[index].audioUrls.push(fileName);
 				json[index].wordBoundries.push(wordBoundries);
@@ -121,18 +128,22 @@ app.get('/', async (req, res) => {
 			onFrameUpdate: (f) => {
 				const endDate = Math.round(new Date().getTime() / 1000);
 				const elapsed = endDate - startDate;
-				console.log(`Rendered frame ${f}`, 'Elapsed seconds:' , elapsed);
+				console.log(`Rendered frame ${f}`, 'Elapsed seconds:', elapsed);
 			},
 			onError: (e) => {
 				console.log(e);
 			},
 			envVariables: process.env as Record<string, string>,
-			parallelism: null,
+			parallelism: os.cpus().length - 1,
 			outputDir: tmpDir,
 			inputProps: json[index],
 			compositionId,
 			imageFormat: 'jpeg',
 			timeoutInMilliseconds: 3000000,
+			quality: 10,
+			chromiumOptions: {
+				gl: 'angle',
+			},
 		});
 
 		const finalOutput = path.join(tmpDir, 'out.mp4');

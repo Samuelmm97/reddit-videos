@@ -70,11 +70,7 @@ export const textToSpeech = async (
 				s,
 				e: SpeechSynthesisWordBoundaryEventArgs
 			) {
-				console.log(
-					'wordBoundary',
-					Number((e.audioOffset / 330000).toFixed(0))
-				);
-				wordBoundries.push(Number((e.audioOffset / 330000).toFixed(0)));
+				wordBoundries.push(Number((e.audioOffset / 340000).toFixed(0)));
 			};
 			synthesizer.synthesisStarted = function (s, e) {
 				console.log('started', e);
