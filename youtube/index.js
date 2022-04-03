@@ -1,95 +1,130 @@
-require("dotenv").config();
-const Youtube = require("youtube-api")
-  , fs = require("fs")
-  , readJson = require("r-json")
-  , Lien = require("lien")
-  , opn = require("opn")
-const token = require("./token.json");
-const express = require("express");
+const dotenv = require('dotenv').config();
+var fs = require('fs');
+var readline = require('readline');
+var {google} = require('googleapis');
+var OAuth2 = google.auth.OAuth2;
+var express = require('express');
+const app = express();
 
-// Init lien server
-let server = new Lien({
-  host: "localhost"
-  , port: 5000
-});
+// If modifying these scopes, delete your previously saved credentials
+// at ~/.credentials/youtube-nodejs-quickstart.json
+var SCOPES = ['https://www.googleapis.com/auth/youtube.readonly'];
+var TOKEN_DIR = (process.env.HOME || process.env.HOMEPATH ||
+    process.env.USERPROFILE) + '/.credentials/';
+var TOKEN_PATH = './token.json';
 
-let oauth = Youtube.authenticate({
-  type: "oauth",
-  client_id: process.env.CLIENT_ID,
-  client_secret: process.env.CLIENT_SECRET,
-  redirect_url: "http://localhost:5000/oauth2callback"
-});
+// Authorize a client with the loaded credentials, then call the YouTube API.
+authorize(process.env, getChannel);
 
-// const test = {
-//   access_token: 'ya29.A0ARrdaM9C2u5Tn_JFhlCyL7Loyli9sHE2H28g7kwa_yoyRDxZvIns0LV3GuIKYM2EQebMkPLz9RyDv5Kht5iVL8SB-jLzCL3BYSw0Z2WM2f_AGr6B8hvNhCFK1yKN9o7ecC-1RaaVBF0OpyuTAbq6GhXZc0z7',
-//   refresh_token: '1//01MJsDAyzLdNzCgYIARAAGAESNwF-L9IrNeCmcI2zR2aXtlpsWkPd3zCCGnArXBdoDlZnRh5eXvsAT3yHasj_H7GqUy4_tekKXUM',
-//   scope: 'https://www.googleapis.com/auth/youtube.upload',
-//   token_type: 'Bearer',
-//   expiry_date: 1648229361400
-// }
+/**
+ * Create an OAuth2 client with the given credentials, and then execute the
+ * given callback function.
+ *
+ * @param {Object} credentials The authorization client credentials.
+ * @param {function} callback The callback to call with the authorized client.
+ */
+function authorize(credentials, callback) {
+  var clientSecret = credentials.CLIENT_SECRET;
+  var clientId = credentials.CLIENT_ID;
+  var redirectUrl = "http://localhost:5000/oauth2callback";
+  var oauth2Client = new OAuth2(clientId, clientSecret, redirectUrl);
 
-console.log(token.expiry_date, Date.now());
-
-if (token && token.expiry_date < Date.now()) {
-  oauth.setCredentials(token);
-  upload();
-} else {
-  const login = opn(oauth.generateAuthUrl({
-    access_type: "offline",
-    scope: ["https://www.googleapis.com/auth/youtube.upload"]
-  }))
-}
-
-function upload() {
-  Youtube.videos.insert({
-    resource: {
-      // Video title and description
-      snippet: {
-        title: "Testing YoutTube API NodeJS module",
-        description: "Test video upload via YouTube API"
-      }
-      // I don't want to spam my subscribers
-      , status: {
-        privacyStatus: "public"
-      }
-    }
-    // This is for the callback function
-    , part: "snippet,status"
-
-    // Create the readable stream to upload the video
-    , media: {
-      body: fs.createReadStream("boatvid.mp4")
-    }
-  }, (err, data) => {
-    console.log("Done.", err, data);
-    process.exit();
-  });
-}
-
-
-// console.log(oauth);
-
-server.addPage("/oauth2callback", lien => {
-  console.log("Trying to get the token using the following code: " + lien.query.code);
-  oauth.getToken(lien.query.code, (err, tokens) => {
-
+  // Check if we have previously stored a token.
+  fs.readFile(TOKEN_PATH, function(err, token) {
     if (err) {
-      lien.lien(err, 400);
-      return console.log(err);
+      getNewToken(oauth2Client, callback);
+    } else {
+      
+      oauth2Client.credentials = JSON.parse(token.toString());
+      callback(oauth2Client);
     }
-
-    console.log("Got the tokens.", tokens);
-
-    oauth.setCredentials(tokens);
-
-    upload();
-
-    fs.writeFile("token.json", JSON.stringify(tokens), (err) => {
-      console.log(err);
-    });
-
-    lien.end("The video is being uploaded. Check out the logs in the terminal.");
-
-
   });
+}
+
+/**
+ * Get and store new token after prompting for user authorization, and then
+ * execute the given callback with the authorized OAuth2 client.
+ *
+ * @param {google.auth.OAuth2} oauth2Client The OAuth2 client to get token for.
+ * @param {getEventsCallback} callback The callback to call with the authorized
+ *     client.
+ */
+function getNewToken(oauth2Client, callback) {
+  var authUrl = oauth2Client.generateAuthUrl({
+    access_type: 'offline',
+    scope: SCOPES
+  });
+  console.log('Authorize this app by visiting this url: ', authUrl);
+  var rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
+  rl.question('Enter the code from that page here: ', function(code) {
+    rl.close();
+    oauth2Client.getToken(code, function(err, token) {
+      if (err) {
+        console.log('Error while trying to retrieve access token', err);
+        return;
+      }
+      oauth2Client.credentials = token;
+      storeToken(token);
+      callback(oauth2Client);
+    });
+  });
+}
+
+/**
+ * Store token to disk be used in later program executions.
+ *
+ * @param {Object} token The token to store to disk.
+ */
+function storeToken(token) {
+  try {
+    fs.mkdirSync(TOKEN_DIR);
+  } catch (err) {
+    if (err.code != 'EEXIST') {
+      throw err;
+    }
+  }
+  fs.writeFile(TOKEN_PATH, JSON.stringify(token), (err) => {
+    if (err) throw err;
+    console.log('Token stored to ' + TOKEN_PATH);
+  });
+}
+
+/**
+ * Lists the names and IDs of up to 10 files.
+ *
+ * @param {google.auth.OAuth2} auth An authorized OAuth2 client.
+ */
+function getChannel(auth) {
+  var service = google.youtube('v3');
+  service.channels.list({
+    auth: auth,
+    part: 'snippet,contentDetails,statistics',
+    forUsername: 'RedditTifu'
+  }, function(err, response) {
+    if (err) {
+      console.log('The API returned an error: ' + err);
+      return;
+    }
+    var channels = response.data.items;
+    if (channels.length == 0) {
+      console.log('No channel found.');
+    } else {
+      console.log('This channel\'s ID is %s. Its title is \'%s\', and ' +
+                  'it has %s views.',
+                  channels[0].id,
+                  channels[0].snippet.title,
+                  channels[0].statistics.viewCount);
+    }
+  });
+}
+app.get('/oauth2callback', (req,res) => {
+  console.log(req);
+ 
 });
+
+const PORT = 5000
+// On localhost:3000 you will see your page.
+app.listen(PORT);
