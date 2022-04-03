@@ -28,12 +28,16 @@ const compositionId = 'HelloWorld';
 const cache = new Map<string, string>();
 
 app.get('/', async (req, res) => {
-	const sendFile = (file: string) => {
-		fs.createReadStream(file)
+	const sendFile = async(file: string) => {
+		
+		var test = fs.createReadStream(file)
 			.pipe(res)
 			.on('close', () => {
 				res.end();
 			});
+		console.log(test);
+		let options:RequestInit = {method:"POST", body:JSON.stringify({readStream: test})};
+		const uploadResponse = await fetch(`http://${process.env.IP}:5000/upload`, options);
 	};
 	try {
 		if (cache.get(JSON.stringify(req.query))) {
@@ -159,6 +163,13 @@ app.get('/', async (req, res) => {
 		});
 		cache.set(JSON.stringify(req.query), finalOutput);
 		sendFile(finalOutput);
+		
+		
+
+
+
+
+
 		console.log('Video rendered and sent!');
 	} catch (err) {
 		console.error(err);

@@ -19,3 +19,11 @@ services:
     env_file:
       - ./Video/.env
     privileged: true
+  youtube:
+    build: ./youtube
+    volumes:
+      - ./youtube:/app
+    ports:
+      - 5000:5000
+    env_file:
+      - ./youtube/.env

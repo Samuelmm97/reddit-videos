@@ -8,14 +8,17 @@ const app = express();
 
 // If modifying these scopes, delete your previously saved credentials
 // at ~/.credentials/youtube-nodejs-quickstart.json
-var SCOPES = ['https://www.googleapis.com/auth/youtube.readonly'];
+var SCOPES = ['https://www.googleapis.com/auth/youtube.upload'];
 var TOKEN_DIR = (process.env.HOME || process.env.HOMEPATH ||
     process.env.USERPROFILE) + '/.credentials/';
 var TOKEN_PATH = './token.json';
 
 // Authorize a client with the loaded credentials, then call the YouTube API.
-authorize(process.env, getChannel);
-
+authorize();
+var clientSecret = process.env.CLIENT_SECRET;
+var clientId = process.env.CLIENT_ID;
+var redirectUrl = "http://localhost:5000/oauth2callback";
+var oauth2Client = new OAuth2(clientId, clientSecret, redirectUrl);
 /**
  * Create an OAuth2 client with the given credentials, and then execute the
  * given callback function.
@@ -23,20 +26,19 @@ authorize(process.env, getChannel);
  * @param {Object} credentials The authorization client credentials.
  * @param {function} callback The callback to call with the authorized client.
  */
-function authorize(credentials, callback) {
-  var clientSecret = credentials.CLIENT_SECRET;
-  var clientId = credentials.CLIENT_ID;
-  var redirectUrl = "http://localhost:5000/oauth2callback";
-  var oauth2Client = new OAuth2(clientId, clientSecret, redirectUrl);
+
+function authorize() {
+ 
 
   // Check if we have previously stored a token.
   fs.readFile(TOKEN_PATH, function(err, token) {
-    if (err) {
-      getNewToken(oauth2Client, callback);
+   
+    if (err || JSON.parse(token.toString()).expiry_date < Date.now()) {
+      getNewToken(oauth2Client);
+      
     } else {
       
       oauth2Client.credentials = JSON.parse(token.toString());
-      callback(oauth2Client);
     }
   });
 }
@@ -49,28 +51,12 @@ function authorize(credentials, callback) {
  * @param {getEventsCallback} callback The callback to call with the authorized
  *     client.
  */
-function getNewToken(oauth2Client, callback) {
+function getNewToken(oauth2Client) {
   var authUrl = oauth2Client.generateAuthUrl({
     access_type: 'offline',
     scope: SCOPES
   });
   console.log('Authorize this app by visiting this url: ', authUrl);
-  var rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout
-  });
-  rl.question('Enter the code from that page here: ', function(code) {
-    rl.close();
-    oauth2Client.getToken(code, function(err, token) {
-      if (err) {
-        console.log('Error while trying to retrieve access token', err);
-        return;
-      }
-      oauth2Client.credentials = token;
-      storeToken(token);
-      callback(oauth2Client);
-    });
-  });
 }
 
 /**
@@ -96,35 +82,58 @@ function storeToken(token) {
  * Lists the names and IDs of up to 10 files.
  *
  * @param {google.auth.OAuth2} auth An authorized OAuth2 client.
+ * @param {string} readStream The URL for the video upload
  */
-function getChannel(auth) {
+function uploadVideo(auth, readStream) {
   var service = google.youtube('v3');
-  service.channels.list({
+  service.videos.insert({
     auth: auth,
-    part: 'snippet,contentDetails,statistics',
-    forUsername: 'RedditTifu'
-  }, function(err, response) {
-    if (err) {
-      console.log('The API returned an error: ' + err);
-      return;
+    resource: {
+      
+      // Video title and description
+      snippet: {
+        title: "Testing YoutTube API NodeJS module",
+        description: "Test video upload via YouTube API"
+      },
+      status:{
+        privacyStatus: "public"
+      }
+    },
+    // This is for the callback function
+     part: "snippet,status",
+
+    // Create the readable stream to upload the video
+     media: {
+      body: readStream
     }
-    var channels = response.data.items;
-    if (channels.length == 0) {
-      console.log('No channel found.');
-    } else {
-      console.log('This channel\'s ID is %s. Its title is \'%s\', and ' +
-                  'it has %s views.',
-                  channels[0].id,
-                  channels[0].snippet.title,
-                  channels[0].statistics.viewCount);
-    }
+  }, (err, data) => {
+    console.log("Done.", err, data);
+    process.exit();
   });
 }
+
 app.get('/oauth2callback', (req,res) => {
+  
+  let code = req.query.code;
+  oauth2Client.getToken(code, function(err, token) {
+    if (err) {
+      console.log('Error while trying to retrieve access token', err);
+      return;
+    }
+    oauth2Client.credentials = token;
+    storeToken(token);
+    //uploadVideo(oauth2Client);
+  });
   console.log(req);
  
 });
 
+app.post('/upload', (req,res) => {
+  authorize();
+  uploadVideo(oauth2Client, req.body.readStream);
+ 
+
+})
 const PORT = 5000
 // On localhost:3000 you will see your page.
 app.listen(PORT);
