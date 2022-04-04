@@ -13,17 +13,11 @@ services:
     build:
       context: ./Video
       dockerfile: Dockerfile
+    volumes:
+      - ./Video:/credentials
     ports:
       - "8000:8000"
     container_name: video
     env_file:
       - ./Video/.env
     privileged: true
-  youtube:
-    build: ./youtube
-    volumes:
-      - ./youtube:/app
-    ports:
-      - 5000:5000
-    env_file:
-      - ./youtube/.env

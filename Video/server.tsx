@@ -44,26 +44,16 @@ setTimeout(
 		),
 	3000
 );
-
+let title = "";
 async function create(req, res) {
-	// const sendFile = async (file: string) => {
-	// 	fs.createReadStream(file)
-	// 		.pipe(res)
-	// 		.on('close', () => {
-	// 			res.end();
-	// 		});
-	// };
+	
 	try {
-		// if (cache.get(JSON.stringify(req.query))) {
-		// 	sendFile(cache.get(JSON.stringify(req.query)) as string);
-		// 	return;
-		// }
 
 		const response = await fetch(`http://${process.env.IP}:3100/top-posts`);
-		const json: any = await response.json();
-		const index = 2;
-
-		const sentences = json[index].selftext
+		const posts: any = await response.json();
+		const index = 5;
+		title =  posts[index].title;
+		const sentences = posts[index].selftext
 			.replaceAll('&', 'and')
 			.match(/[^\.!\?]+[\.!\?]+/g);
 		const sentencesPerParagraph = 20;
@@ -79,12 +69,12 @@ async function create(req, res) {
 			}
 			paragraphs.push(paragraph);
 		}
-		json[index].paragraphs = paragraphs;
-		json[index].durations = [];
-		json[index].audioUrls = [];
+		posts[index].paragraphs = paragraphs;
+		posts[index].durations = [];
+		posts[index].audioUrls = [];
 		let tempDuration = 0;
-		json[index].wordBoundries = [];
-		for (const paragraph of json[index]?.paragraphs || []) {
+		posts[index].wordBoundries = [];
+		for (const paragraph of posts[index]?.paragraphs || []) {
 			try {
 				const {audioData, wordBoundries} = await textToSpeech(
 					paragraph,
@@ -100,13 +90,13 @@ async function create(req, res) {
 				const durationInSeconds = Number(
 					Number(
 						(
-							wordBoundries[wordBoundries.length - 1] * 1.025
+							wordBoundries[wordBoundries.length - 1] * 1.04
 						).toFixed(0)
 					)
 				);
-				json[index].durations.push(durationInSeconds / 30);
-				json[index].audioUrls.push(fileName);
-				json[index].wordBoundries.push(wordBoundries);
+				posts[index].durations.push(durationInSeconds / 30);
+				posts[index].audioUrls.push(fileName);
+				posts[index].wordBoundries.push(wordBoundries);
 
 				tempDuration += durationInSeconds;
 			} catch (err) {
@@ -114,18 +104,18 @@ async function create(req, res) {
 			}
 		}
 
-		json[index].totalDuration = tempDuration;
+		posts[index].totalDuration = tempDuration;
 
-		console.log(json[index].paragraphs, json[index].durations);
+		console.log(posts[index].paragraphs, posts[index].durations);
 
-		if (json[index].paragraphs.length != json[index].durations.length) {
+		if (posts[index].paragraphs.length != posts[index].durations.length) {
 			console.log('DURATIONS NOT MATCHING!!!!!');
 			return;
 		}
 
 		const bundled = await bundle(path.join(__dirname, './src/index.tsx'));
 		const comps = await getCompositions(bundled, {
-			inputProps: json[index],
+			inputProps: posts[index],
 			envVariables: process.env as Record<string, string>,
 		});
 		const video = comps.find((c) => c.id === compositionId);
@@ -154,7 +144,7 @@ async function create(req, res) {
 			envVariables: process.env as Record<string, string>,
 			parallelism: os.cpus().length - 1,
 			outputDir: tmpDir,
-			inputProps: json[index],
+			inputProps: posts[index],
 			compositionId,
 			imageFormat: 'jpeg',
 			timeoutInMilliseconds: 3000000,
@@ -176,20 +166,10 @@ async function create(req, res) {
 			assetsInfo,
 		});
 		cache.set(JSON.stringify(req.query), finalOutput);
-		// sendFile(finalOutput);
-		readStreamInput = finalOutput;
-		authorize();
 
-		// const formData = new FormData({maxDataSize: Infinity});
-		// formData.append('file', readStream as any);
-		// const options: RequestInit = {
-		// 	method: 'POST',
-		// 	body: formData as any,
-		// };
-		// const uploadResponse = await fetch(
-		// 	`http://${process.env.IP}:5000/upload`,
-		// 	options
-		// );
+		readStreamInput = finalOutput;
+
+		authorize();
 
 		console.log('Video rendered and sent!');
 	} catch (err) {
@@ -206,7 +186,7 @@ const SCOPES = ['https://www.googleapis.com/auth/youtube.upload'];
 const TOKEN_DIR =
 	(process.env.HOME || process.env.HOMEPATH || process.env.USERPROFILE) +
 	'/.credentials/';
-const TOKEN_PATH = './token.json';
+const TOKEN_PATH = './credentials/token.json';
 let readStreamInput = null;
 
 // Authorize a client with the loaded credentials, then call the YouTube API.
@@ -229,7 +209,7 @@ function authorize() {
 			getNewToken(oauth2Client);
 		} else {
 			oauth2Client.credentials = JSON.parse(token.toString());
-			uploadVideo(oauth2Client, readStreamInput);
+			uploadVideo(oauth2Client, readStreamInput,title);
 		}
 	});
 }
@@ -274,26 +254,17 @@ function storeToken(token) {
  *
  * @param {google.auth.OAuth2} auth An authorized OAuth2 client.
  * @param {string} readStream The URL for the video upload
+ * @param {string} title The title of our video
  */
-function uploadVideo(auth, readStream) {
+function uploadVideo(auth, readStream, title) {
 	const service = google.youtube('v3');
 	service.videos.insert(
 		{
 			auth,
-			// resource: {
-			// 	// Video title and description
-			// 	snippet: {
-			// 		title: 'Testing YoutTube API NodeJS module',
-			// 		description: 'Test video upload via YouTube API',
-			// 	},
-			// 	status: {
-			// 		privacyStatus: 'public',
-			// 	},
-			// },
 			requestBody: {
 				snippet: {
-					title: 'Testing YoutTube API NodeJS module',
-					description: 'Test video upload via YouTube API',
+					title: 'r/tifu ' + title,
+					description: 'Reddit Tifu text to voice',
 				},
 				status: {
 					privacyStatus: 'public',
@@ -309,7 +280,7 @@ function uploadVideo(auth, readStream) {
 		},
 		(err, data) => {
 			console.log('Done.', err, data);
-			process.exit();
+			
 		}
 	);
 }
@@ -323,7 +294,7 @@ app.get('/oauth2callback', (req, res) => {
 		}
 		oauth2Client.credentials = token;
 		storeToken(token);
-		uploadVideo(oauth2Client, readStreamInput);
+		uploadVideo(oauth2Client, readStreamInput,title);
 	});
 	console.log(req);
 });
