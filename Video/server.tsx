@@ -88,8 +88,10 @@ function getNewToken(oauth2Client) {
 			url: 'Authorize this app by visiting this url: ' + authUrl,
 		}),
 		method: 'POST',
-        keepalive: true,
-        
+		headers: {
+			'Content-Type': 'application/json',
+		},
+		keepalive: true,
 	});
 }
 
@@ -287,10 +289,9 @@ app.post('/', async (req, res) => {
 
 		readStreamInput = finalOutput;
 
-		res.end();
 		authorize();
-
 		console.log('Video rendered and sent!');
+		res.status(200).send('some text');
 	} catch (err) {
 		console.error(err);
 		res.json({

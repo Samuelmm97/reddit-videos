@@ -32,8 +32,9 @@ client.once("ready", async () => {
 
 app.post("/send-auth", (req, res) => {
   const { url } = req.body;
-  console.log(url);
+  console.log(url, req.body);
   notify(url);
+  res.status(200).send("some text");
 });
 
 app.listen(port, () => {

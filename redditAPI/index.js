@@ -68,6 +68,7 @@ app.get("/top-posts", async (req, res) => {
     },
     keepalive: true,
   });
+
   res.send(posts);
 });
 
