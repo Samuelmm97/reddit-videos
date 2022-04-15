@@ -9,6 +9,14 @@ services:
       - 3100:3100
     env_file:
       - ./redditAPI/.env
+  discord-bot:
+    build: ./DiscordBot
+    volumes:
+      - ./DiscordBot:/app
+    ports:
+      - 4000:4000
+    env_file:
+      - ./DiscordBot/.env
   video:
     build:
       context: ./Video

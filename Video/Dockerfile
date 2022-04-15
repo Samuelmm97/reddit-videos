@@ -2,7 +2,6 @@
 # If you don't want server rendering, you can safely delete this file.
 
 FROM node:alpine
-WORKDIR /credenitals
 
 # Installs latest Chromium (85) package.
 RUN apk add --no-cache \
