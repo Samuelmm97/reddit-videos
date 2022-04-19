@@ -41,8 +41,9 @@ const SCOPES = ['https://www.googleapis.com/auth/youtube.upload'];
 const TOKEN_DIR =
 	(process.env.HOME || process.env.HOMEPATH || process.env.USERPROFILE) +
 	'/.credentials/';
-const TOKEN_PATH = './credentials/token.json';
+const TOKEN_PATH = './credentials/';
 let readStreamInput = null;
+let subreddit = '';
 
 // Authorize a client with the loaded credentials, then call the YouTube API.
 const clientSecret = process.env.CLIENT_SECRET;
@@ -59,7 +60,7 @@ const oauth2Client = new OAuth2(clientId, clientSecret, redirectUrl);
 
 function authorize() {
 	// Check if we have previously stored a token.
-	fs.readFile(TOKEN_PATH, (err, token) => {
+	fs.readFile(TOKEN_PATH + subreddit + 'token.json', (err, token) => {
 		if (err || JSON.parse(token.toString()).expiry_date < Date.now()) {
 			getNewToken(oauth2Client);
 		} else {
@@ -85,7 +86,10 @@ function getNewToken(oauth2Client) {
 	console.log('test', authUrl);
 	fetch(`http://${process.env.IP}:4000/send-auth`, {
 		body: JSON.stringify({
-			url: 'Authorize this app by visiting this url: ' + authUrl,
+			url:
+				subreddit.toUpperCase() +
+				': Authorize this app by visiting this url: ' +
+				authUrl,
 		}),
 		method: 'POST',
 		headers: {
@@ -108,10 +112,16 @@ function storeToken(token) {
 			throw err;
 		}
 	}
-	fs.writeFile(TOKEN_PATH, JSON.stringify(token), (err) => {
-		if (err) throw err;
-		console.log('Token stored to ' + TOKEN_PATH);
-	});
+	fs.writeFile(
+		TOKEN_PATH + subreddit + 'token.json',
+		JSON.stringify(token),
+		(err) => {
+			if (err) throw err;
+			console.log(
+				'Token stored to ' + TOKEN_PATH + subreddit + 'token.json'
+			);
+		}
+	);
 }
 
 /**
@@ -123,12 +133,13 @@ function storeToken(token) {
  */
 function uploadVideo(auth, readStream, title) {
 	const service = google.youtube('v3');
+	console.log('the title is ', title);
 	service.videos.insert(
 		{
 			auth,
 			requestBody: {
 				snippet: {
-					title: 'r/tifu ' + title,
+					title: subreddit + ' ' + (title.slice(0, 70) || ''),
 					description: 'Reddit Tifu text to voice',
 				},
 				status: {
@@ -144,7 +155,7 @@ function uploadVideo(auth, readStream, title) {
 			},
 		},
 		(err, data) => {
-			console.log('Done.', err, data);
+			if (err) console.log(err);
 		}
 	);
 }
@@ -160,13 +171,14 @@ app.get('/oauth2callback', (req, res) => {
 		storeToken(token);
 		uploadVideo(oauth2Client, readStreamInput, title);
 	});
-	console.log(req);
+	// console.log(req);
 });
 
 app.post('/', async (req, res) => {
 	const {body} = req;
 	console.log(req.body);
 	const {posts} = req.body;
+	subreddit = posts[0].subreddit_name_prefixed.slice(2);
 	try {
 		// const response = await fetch(`http://${process.env.IP}:3100/top-posts`);
 		// const posts: any = await response.json();
@@ -200,7 +212,7 @@ app.post('/', async (req, res) => {
 					paragraph,
 					'enUSWoman1'
 				);
-				console.log(wordBoundries);
+				// console.log(wordBoundries);
 				const fileName = md5(paragraph) + '.wav';
 				// await fs.promises.open(fileName, 'w');
 				await fs.promises.writeFile(
@@ -220,13 +232,13 @@ app.post('/', async (req, res) => {
 
 				tempDuration += durationInSeconds;
 			} catch (err) {
-				console.log(paragraph, err);
+				// console.log(paragraph, err);
 			}
 		}
 
 		posts[index].totalDuration = tempDuration;
 
-		console.log(posts[index].paragraphs, posts[index].durations);
+		// console.log(posts[index].paragraphs, posts[index].durations);
 
 		if (posts[index].paragraphs.length != posts[index].durations.length) {
 			console.log('DURATIONS NOT MATCHING!!!!!');

@@ -19,6 +19,9 @@ app.use(bodyParser.json());
 const port = process.env.PORT || 3001;
 // Configuration File for Snoowrap and Snoostorm
 
+const TIFU = "tifu";
+const LIFEPROTIPS = "LifeProTips";
+
 // Requiring Snoowrap
 const Snoowrap = require("snoowrap");
 const { json } = require("body-parser");
@@ -43,7 +46,7 @@ const r = new Snoowrap(auth);
 r.config(config);
 
 app.get("/top-posts", async (req, res) => {
-  const tifuPosts = await (await r.getSubreddit("tifu")).getHot();
+  const tifuPosts = await (await r.getSubreddit(TIFU)).getHot();
   const posts = [];
   //console.log(tifuPosts[4])
   tifuPosts.forEach(async (post) => {

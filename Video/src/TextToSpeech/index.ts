@@ -73,10 +73,10 @@ export const textToSpeech = async (
 				wordBoundries.push(Number((e.audioOffset / 340000).toFixed(0)));
 			};
 			synthesizer.synthesisStarted = function (s, e) {
-				console.log('started', e);
+				// console.log('started', e);
 			};
 			synthesizer.synthesisCompleted = function (s, e) {
-				console.log('COMPLETED', e);
+				// console.log('COMPLETED', e);
 			};
 		}
 	);
