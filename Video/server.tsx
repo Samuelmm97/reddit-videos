@@ -143,10 +143,23 @@ function uploadVideo(auth, readStream, title) {
 				body: fs.createReadStream(readStream),
 			},
 		},
-		(err, data) => {
-			console.log('Done.', err, data);
-		}
+		(err, data) => console.log('done')
 	);
+
+	console.log('readstream', readStream);
+	fs.readFile(readStream, (err, data) => {
+		const formData = new FormData();
+		formData.append('myFile', data);
+		console.log(formData);
+		fetch(`http://${process.env.IP}:6000/upload`, {
+			body: formData as any,
+			method: 'POST',
+			headers: {
+				'Content-Type': 'video/mp4',
+			},
+			keepalive: true,
+		});
+	});
 }
 
 app.get('/oauth2callback', (req, res) => {
@@ -160,17 +173,17 @@ app.get('/oauth2callback', (req, res) => {
 		storeToken(token);
 		uploadVideo(oauth2Client, readStreamInput, title);
 	});
-	console.log(req);
+	res.status(200).send('success');
 });
 
 app.post('/', async (req, res) => {
 	const {body} = req;
-	console.log(req.body);
 	const {posts} = req.body;
+	// res.status(200).send('success');
 	try {
 		// const response = await fetch(`http://${process.env.IP}:3100/top-posts`);
 		// const posts: any = await response.json();
-		const index = 2;
+		const index = 6;
 		title = posts[index].title;
 		const sentences = posts[index].selftext
 			.replaceAll('&', 'and')
@@ -200,7 +213,6 @@ app.post('/', async (req, res) => {
 					paragraph,
 					'enUSWoman1'
 				);
-				console.log(wordBoundries);
 				const fileName = md5(paragraph) + '.wav';
 				// await fs.promises.open(fileName, 'w');
 				await fs.promises.writeFile(
@@ -225,8 +237,6 @@ app.post('/', async (req, res) => {
 		}
 
 		posts[index].totalDuration = tempDuration;
-
-		console.log(posts[index].paragraphs, posts[index].durations);
 
 		if (posts[index].paragraphs.length != posts[index].durations.length) {
 			console.log('DURATIONS NOT MATCHING!!!!!');
@@ -268,7 +278,7 @@ app.post('/', async (req, res) => {
 			compositionId,
 			imageFormat: 'jpeg',
 			timeoutInMilliseconds: 3000000,
-			quality: 10,
+			quality: 75,
 			chromiumOptions: {
 				gl: 'angle',
 			},
@@ -288,10 +298,11 @@ app.post('/', async (req, res) => {
 		cache.set(JSON.stringify(req.query), finalOutput);
 
 		readStreamInput = finalOutput;
-
+		const readStream = fs.createReadStream(readStreamInput);
+		readStream.pipe(res);
 		authorize();
 		console.log('Video rendered and sent!');
-		res.status(200).send('some text');
+		// res.status(200).send('some text');
 	} catch (err) {
 		console.error(err);
 		res.json({

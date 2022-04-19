@@ -22,6 +22,7 @@ const port = process.env.PORT || 3001;
 // Requiring Snoowrap
 const Snoowrap = require("snoowrap");
 const { json } = require("body-parser");
+const { response } = require("express");
 const auth = {
   userAgent: process.env.USER_AGENT,
   clientId: process.env.CLIENT_ID,
@@ -67,18 +68,17 @@ app.get("/top-posts", async (req, res) => {
       "Content-Type": "application/json",
     },
     keepalive: true,
+  }).then((response) => {
+    console.log(response);
+    console.log(response.body);
+    // const reader = response.body.getReader();
+    // // ...
+    // reader.read().then(({ done, value }) => {
+    //   console.log(done, value);
+    // });
   });
 
   res.send(posts);
-});
-
-app.post("/create-audio", async (req, res) => {
-  const { body } = req;
-  console.log(body, req.body);
-  const { fileName, audioData } = body;
-  console.log(fileName);
-  fs.writeFile("../audio/" + fileName, Buffer.from(audioData));
-  res.send({ success: true });
 });
 
 app.listen(port, () => {

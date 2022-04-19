@@ -17,6 +17,14 @@ services:
       - 4000:4000
     env_file:
       - ./DiscordBot/.env
+  youtube:
+    build: ./YouTube
+    volumes:
+      - ./YouTube:/app
+    ports:
+      - 6000:6000
+    env_file:
+      - ./YouTube/.env
   video:
     build:
       context: ./Video
